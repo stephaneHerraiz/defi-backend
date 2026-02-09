@@ -1,0 +1,1 @@
+export const QUESTDB_OPTIONS = 'QUESTDB_OPTIONS';

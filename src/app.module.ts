@@ -7,6 +7,8 @@ import { AaveMarketEntity } from './aave/entities/aave-market.entity';
 import { AccountEntity } from './aave/entities/accounts.entity';
 import { AaveModule } from './aave/aave.module';
 import { EthereumModule } from './ethereum/ethereum.module';
+import { QuestdbModule } from './questdb/questdb.module';
+import { HistoricalPriceDataModule } from './historical-price-data/historical-price-data.module';
 import { UserEntity } from './ethereum/entities/users.entity';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './ethereum/guards/auth.guard';
@@ -39,6 +41,17 @@ import { AuthGuard } from './ethereum/guards/auth.guard';
     }),
     EthereumModule,
     AaveModule,
+    QuestdbModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        host: configService.get<string>('QUESTDB_HOST', 'localhost'),
+        pgPort: configService.get<number>('QUESTDB_PG_PORT', 8812),
+        username: configService.get<string>('QUESTDB_USERNAME', 'admin'),
+        password: configService.get<string>('QUESTDB_PASSWORD', 'quest'),
+      }),
+      inject: [ConfigService],
+    }),
+    HistoricalPriceDataModule,
   ],
   providers: [
     {
