@@ -7,6 +7,7 @@ import { AaveMarketEntity } from './aave/entities/aave-market.entity';
 import { AccountEntity } from './aave/entities/accounts.entity';
 import { AaveModule } from './aave/aave.module';
 import { EthereumModule } from './ethereum/ethereum.module';
+import { CoingeckoModule } from './coingecko/coingecko.module';
 import { QuestdbModule } from './questdb/questdb.module';
 import { HistoricalPriceDataModule } from './historical-price-data/historical-price-data.module';
 import { UserEntity } from './ethereum/entities/users.entity';
@@ -41,6 +42,7 @@ import { AuthGuard } from './ethereum/guards/auth.guard';
     }),
     EthereumModule,
     AaveModule,
+    CoingeckoModule,
     QuestdbModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
