@@ -38,6 +38,21 @@ export const AaveMarkets = [
     rpcProvider: 'https://public-arb-mainnet.fastnode.io',
     marketAddress: addressbook.AaveV3Arbitrum,
   },
+  {
+    chain: 'Base',
+    rpcProvider: 'https://1rpc.io/base',
+    marketAddress: addressbook.AaveV3Base,
+  },
+  {
+    chain: 'Ethereum',
+    rpcProvider: 'https://ethereum-rpc.publicnode.com',
+    marketAddress: addressbook.AaveV3Ethereum,
+  },
+  {
+    chain: 'Optimism',
+    rpcProvider: 'https://optimism-rpc.publicnode.com',
+    marketAddress: addressbook.AaveV3Optimism,
+  },
 ];
 
 export class AaveUtils {
