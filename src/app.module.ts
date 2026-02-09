@@ -10,6 +10,7 @@ import { EthereumModule } from './ethereum/ethereum.module';
 import { CoingeckoModule } from './coingecko/coingecko.module';
 import { QuestdbModule } from './questdb/questdb.module';
 import { HistoricalPriceDataModule } from './historical-price-data/historical-price-data.module';
+import { CronModule } from './cron/cron.module';
 import { UserEntity } from './ethereum/entities/users.entity';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './ethereum/guards/auth.guard';
@@ -54,6 +55,7 @@ import { AuthGuard } from './ethereum/guards/auth.guard';
       inject: [ConfigService],
     }),
     HistoricalPriceDataModule,
+    CronModule,
   ],
   providers: [
     {
