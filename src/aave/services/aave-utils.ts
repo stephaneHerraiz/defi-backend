@@ -25,17 +25,17 @@ export interface AaveAsset {
 export const AaveMarkets = [
   {
     chain: 'ZkSync',
-    rpcProviver: 'https://mainnet.era.zksync.io',
+    rpcProvider: 'https://mainnet.era.zksync.io',
     marketAddress: addressbook.AaveV3ZkSync,
   },
   {
     chain: 'Polygon',
-    rpcProviver: 'https://polygon-bor-rpc.publicnode.com',
+    rpcProvider: 'https://polygon-bor-rpc.publicnode.com',
     marketAddress: addressbook.AaveV3Polygon,
   },
   {
     chain: 'Arbitrum',
-    rpcProviver: 'https://arbitrum.meowrpc.com',
+    rpcProvider: 'https://public-arb-mainnet.fastnode.io',
     marketAddress: addressbook.AaveV3Arbitrum,
   },
 ];
@@ -52,17 +52,24 @@ export class AaveUtils {
   userIncentives: any;
   currentAccount!: AccountEntity;
 
-  constructor(chain: string) {
+  constructor(chain: string, marketRpcProvider?: string) {
     this.market = AaveMarkets.find((market) => market.chain === chain);
     if (!this.market) {
       throw new Error(`Market not found for chain ${chain}`);
     }
+
+    if (marketRpcProvider) {
+      this.market.rpcProvider = marketRpcProvider;
+    }
+
     this.marketEntity = new AaveMarketEntity(this.market);
 
     const provider = new ethers.providers.JsonRpcProvider(
-      this.marketEntity.rpcProviver,
+      this.market.rpcProvider,
     );
+
     this.assets = Object(this.market.marketAddress.ASSETS);
+
     this.poolDataProviderContract = new UiPoolDataProvider({
       uiPoolDataProviderAddress:
         this.market.marketAddress.UI_POOL_DATA_PROVIDER,
@@ -177,5 +184,9 @@ export class AaveUtils {
   getReserves() {
     const userSummary = this.formatUserSummary();
     return userSummary.userReservesData;
+  }
+
+  getMarketChainInfo() {
+    return this.market;
   }
 }

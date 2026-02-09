@@ -23,6 +23,7 @@
     "@aave/contract-helpers": "^1.33.1",
     "@aave/math-utils": "^1.33.1",
     "@bgd-labs/aave-address-book": "^4.18.0",
+    "@debut/indicators": "^1.3.22",
     "@metamask/eth-sig-util": "^8.2.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",

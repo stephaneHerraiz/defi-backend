@@ -8,9 +8,13 @@ export class AaveMarketEntity {
   @Column()
   rpcProviver!: string;
 
+  @Column({ nullable: true })
+  coingeckoName!: string;
+
   constructor(market: any) {
     if (market === undefined) return;
     this.chain = market.chain;
     this.rpcProviver = market.rpcProviver;
+    this.coingeckoName = market.coingeckoName;
   }
 }

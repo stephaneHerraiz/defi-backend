@@ -13,4 +13,8 @@ export class AaveMarketsService {
   async findAll(): Promise<AaveMarketEntity[]> {
     return await this.aaveMarketRepository.find();
   }
+
+  async find(name: string): Promise<AaveMarketEntity | null> {
+    return await this.aaveMarketRepository.findOneBy({ chain: name });
+  }
 }
