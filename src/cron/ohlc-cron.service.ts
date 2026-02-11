@@ -95,7 +95,7 @@ export class OhlcCronService {
         );
 
         // Add a small delay to avoid rate limiting on CoinGecko API
-        await this.delay(500);
+        await this.delay(5000);
       }
 
       this.logger.log(`Completed processing market: ${chain}`);
