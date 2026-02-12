@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TerminusModule } from '@nestjs/terminus';
 import { AaveMarketStatusEntity } from './aave/entities/aave-market-status.entity';
 import { AaveMarketEntity } from './aave/entities/aave-market.entity';
 import { AccountEntity } from './aave/entities/accounts.entity';
@@ -14,6 +15,7 @@ import { CronModule } from './cron/cron.module';
 import { UserEntity } from './ethereum/entities/users.entity';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './ethereum/guards/auth.guard';
+import { HealthController } from './health.controller';
 
 @Module({
   imports: [
@@ -56,6 +58,7 @@ import { AuthGuard } from './ethereum/guards/auth.guard';
     }),
     HistoricalPriceDataModule,
     CronModule,
+    TerminusModule,
   ],
   providers: [
     {
@@ -63,6 +66,7 @@ import { AuthGuard } from './ethereum/guards/auth.guard';
       useClass: AuthGuard,
     },
   ],
+  controllers: [HealthController],
 })
 export class AppModule {
   constructor(private dataSource: DataSource) {}
