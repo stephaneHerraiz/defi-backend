@@ -24,11 +24,12 @@ WORKDIR /app
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001
 
-# Copy package files
+# Copy package files and node_modules from builder
 COPY package.json yarn.lock ./
+COPY --from=builder /app/node_modules ./node_modules
 
-# Install only production dependencies
-RUN yarn install --frozen-lockfile --production && yarn cache clean
+# Prune dev dependencies
+RUN yarn install --frozen-lockfile --production --ignore-scripts --prefer-offline && yarn cache clean
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist

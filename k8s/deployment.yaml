@@ -46,22 +46,22 @@ spec:
                 name: defi-backend-secrets
             - configMapRef:
                 name: defi-backend-config
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 3000
-            initialDelaySeconds: 30
-            periodSeconds: 30
-            timeoutSeconds: 5
-            failureThreshold: 3
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 3000
-            initialDelaySeconds: 10
-            periodSeconds: 10
-            timeoutSeconds: 3
-            failureThreshold: 3
+          # livenessProbe:
+          #   httpGet:
+          #     path: /health
+          #     port: 3000
+          #   initialDelaySeconds: 30
+          #   periodSeconds: 30
+          #   timeoutSeconds: 5
+          #   failureThreshold: 3
+          # readinessProbe:
+          #   httpGet:
+          #     path: /health
+          #     port: 3000
+          #   initialDelaySeconds: 10
+          #   periodSeconds: 10
+          #   timeoutSeconds: 3
+          #   failureThreshold: 3
 ---
 apiVersion: v1
 kind: Service
@@ -90,59 +90,13 @@ data:
   DATABASE_NAME: "aave-store"
   QUESTDB_HOST: "questdb-headless"
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: defi-backend-secrets
-  labels:
-    app: defi-backend
-type: Opaque
-stringData:
-  JWT_SECRET: "nf5cfZEW+Nsg1GZGvNNqVmSEuVOOLC/u5CiBJVuCJLo="
-  COINGECKO_API_KEY: "CG-jeJZg8Y9vcXriV9B36REMig9"
----
-apiVersion: traefik.io/v1alpha1
-kind: Middleware
-metadata:
-  name: defi-backend-strip-api
-spec:
-  stripPrefix:
-    prefixes:
-      - /api
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: defi-backend
-  annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: web
-spec:
-  ingressClassName: traefik
-  rules:
-    - host: api.defi.local
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: defi-backend
-                port:
-                  number: 3000
----
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
-metadata:
-  name: defi-backend-api
-spec:
-  entryPoints:
-    - web
-  routes:
-    - match: PathPrefix(`/api`)
-      kind: Rule
-      priority: 100
-      middlewares:
-        - name: defi-backend-strip-api
-      services:
-        - name: defi-backend
-          port: 3000
+# apiVersion: v1
+# kind: Secret
+# metadata:
+#   name: defi-backend-secrets
+#   labels:
+#     app: defi-backend
+# type: Opaque
+# stringData:
+#   JWT_SECRET: "set_jwt_secret_here"
+#   COINGECKO_API_KEY: "set_coingecko_secret_here"
