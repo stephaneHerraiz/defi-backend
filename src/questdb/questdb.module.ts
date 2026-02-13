@@ -1,6 +1,5 @@
 import { Module, DynamicModule, Global } from '@nestjs/common';
 import { QuestdbService } from './questdb.service';
-import { QuestdbController } from './questdb.controller';
 import { QUESTDB_OPTIONS } from './questdb.constants';
 
 export interface QuestdbModuleOptions {
@@ -31,7 +30,7 @@ export class QuestdbModule {
         },
         QuestdbService,
       ],
-      controllers: [QuestdbController],
+      controllers: [],
       exports: [QuestdbService],
     };
   }
@@ -48,7 +47,7 @@ export class QuestdbModule {
         },
         QuestdbService,
       ],
-      controllers: [QuestdbController],
+      controllers: [],
       exports: [QuestdbService],
     };
   }
