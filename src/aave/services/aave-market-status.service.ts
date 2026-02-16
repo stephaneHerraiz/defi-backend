@@ -22,6 +22,32 @@ import { HistoricalPriceDataService } from 'src/historical-price-data/historical
 
 const AAVE_SUBGRAPH_API_KEY = 'a5133c74a7c022d407d40bfc277e1aa4';
 
+export interface AAveReserveStatus {
+  id: string;
+  underlyingAsset: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+  underlyingBalance: number;
+  monthlyBB?: {
+    lower: number;
+    middle: number;
+    upper: number;
+  };
+}
+
+export interface AaveMarketStatus {
+  totalBorrowsUSD: number;
+  monthlyBBScenario: lowerBollingerBandScenario;
+}
+
+export interface lowerBollingerBandScenario {
+  healthFactor: number;
+  maximumBorrowPower: number;
+  liquidationBorrowPower: number;
+  reserveStatusList: AAveReserveStatus[];
+}
+
 @Injectable()
 export class AaveMarketStatusService {
   constructor(
@@ -36,7 +62,7 @@ export class AaveMarketStatusService {
     accountAddress?: string,
     marketChain?: string,
   ): Promise<AaveMarketStatusEntity[]> {
-    let options: FindManyOptions<AaveMarketStatusEntity> = {
+    const options: FindManyOptions<AaveMarketStatusEntity> = {
       relations: {
         market: true,
         account: true,
@@ -105,7 +131,7 @@ export class AaveMarketStatusService {
     }
   }
 
-  async getReserveStatus(accountAddress: AccountEntity, marketChain: string) {
+  async getMarketStatus(accountAddress: AccountEntity, marketChain: string): Promise<AaveMarketStatus> {
     const market = await this.aaveMarketsService.find(marketChain);
     if (!market) {
       throw new Error(`Market not found for chain ${marketChain}`);
@@ -135,38 +161,53 @@ export class AaveMarketStatusService {
       totalBorrowsUSD += Number(reserve.totalBorrowsUSD);
     });
 
-    const reserveStatus: {
-      reserve: ComputedUserReserve<
-        ReserveDataHumanized & FormatReserveUSDResponse
-      >;
-      bb:
-        | {
-            lower: number;
-            middle: number;
-            upper: number;
-          }
-        | undefined;
-    }[] = [];
+    const reserveStatusList: AAveReserveStatus[] = [];
 
-    let lowerHealthFactor = 0;
+    let totalLowerBBBalanceUSD = 0;
 
     for (const reserve of collateralReserves) {
       const bbres = await this.getMounthlyBB(
         reserve.underlyingAsset,
-        utils.market.marketAddress.CHAIN_ID,
+        Number(utils.market.marketAddress.CHAIN_ID),
       );
       if (bbres && bbres.lower > 0) {
-        const lowerBBBalanceUSD = Number(reserve.underlyingBalance) * bbres.lower;
-        lowerHealthFactor += lowerBBBalanceUSD * Number(reserve.reserve.formattedReserveLiquidationThreshold);
+        const lowerBBBalanceUSD =
+          Number(reserve.underlyingBalance) * bbres.lower;
+        totalLowerBBBalanceUSD +=
+          lowerBBBalanceUSD *
+          Number(reserve.reserve.formattedReserveLiquidationThreshold);
       }
 
-      reserveStatus.push({
-        bb: bbres,
-        reserve,
-      });
+      const reserveStatus: AAveReserveStatus = {
+        id: reserve.reserve.id,
+        underlyingAsset: reserve.underlyingAsset,
+        name: reserve.reserve.name,
+        symbol: reserve.reserve.symbol,
+        decimals: reserve.reserve.decimals,
+        underlyingBalance: Number(reserve.underlyingBalance),
+      };
+
+      if (bbres) {
+        reserveStatus.monthlyBB = {
+          lower: bbres.lower,
+          middle: bbres.middle,
+          upper: bbres.upper,
+        };
+      }
+
+      reserveStatusList.push(reserveStatus);
     }
-    lowerHealthFactor = lowerHealthFactor / totalBorrowsUSD;
-    return { lowerHealthFactor, reserveStatus };
+    const lowerMonthlyBBHealthFactor = totalLowerBBBalanceUSD / totalBorrowsUSD;
+    const maximumBorrowPowerUSD = totalLowerBBBalanceUSD / 1.2;
+    return {
+      totalBorrowsUSD,
+      monthlyBBScenario: {
+        healthFactor: lowerMonthlyBBHealthFactor,
+        maximumBorrowPower: maximumBorrowPowerUSD,
+        liquidationBorrowPower: totalLowerBBBalanceUSD,
+        reserveStatusList,
+      },
+    };
   }
 
   private async getMounthlyBB(
@@ -184,7 +225,7 @@ export class AaveMarketStatusService {
       });
 
     let bbres: { lower: number; middle: number; upper: number } | undefined;
-    const bb = new BollingerBands(20, 2);
+    const bb = new BollingerBands(20, 3);
     tokenMarketChart.dataset.reverse().forEach((price) => {
       bbres = bb.nextValue(price.close);
     });

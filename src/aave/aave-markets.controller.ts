@@ -94,7 +94,7 @@ export class AaveMarketController {
         .send('Account not found. Please provide a valid account address.');
       return;
     }
-    const result = await this.aaveMarketStatusService.getReserveStatus(
+    const result = await this.aaveMarketStatusService.getMarketStatus(
       account,
       marketChain,
     );
