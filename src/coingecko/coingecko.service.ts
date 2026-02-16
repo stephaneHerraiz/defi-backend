@@ -1,45 +1,37 @@
-import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  HttpException,
+  HttpStatus,
+  Inject,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as fs from 'fs/promises';
-import * as path from 'path';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import {
   CoinMarketChartResponse,
   CoinMarketChartParams,
 } from './interfaces/coin-market-chart.interface';
-import { Coin, CachedCoinList } from './interfaces/coin-list.interface';
+import { Coin } from './interfaces/coin-list.interface';
 
 @Injectable()
 export class CoingeckoService {
   private readonly logger = new Logger(CoingeckoService.name);
   private readonly baseUrl = 'https://api.coingecko.com/api/v3';
-  private readonly cacheDir = path.join(process.cwd(), 'storage');
-  private readonly cacheFilePath = path.join(
-    this.cacheDir,
-    'coingecko-coins-list.json',
-  );
+  private readonly cacheKey = 'coingecko:coins-list';
   private readonly cacheTTL: number; // in milliseconds
   private apiKey: string;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {
     // Default TTL: 24 hours (in milliseconds)
     this.cacheTTL = this.configService.get<number>(
       'COINGECKO_CACHE_TTL',
       24 * 60 * 60 * 1000,
     );
     this.apiKey = this.configService.get<string>('COINGECKO_API_KEY', '');
-    this.initializeCacheDir();
-  }
-
-  /**
-   * Initialize cache directory if it doesn't exist
-   */
-  private async initializeCacheDir(): Promise<void> {
-    try {
-      await fs.mkdir(this.cacheDir, { recursive: true });
-      this.logger.log(`Cache directory initialized at: ${this.cacheDir}`);
-    } catch (error) {
-      this.logger.error(`Failed to create cache directory: ${error.message}`);
-    }
   }
 
   /**
@@ -122,60 +114,8 @@ export class CoingeckoService {
   }
 
   /**
-   * Read cached coin list from file
-   */
-  private async readCachedCoinList(): Promise<CachedCoinList | null> {
-    try {
-      const fileContent = await fs.readFile(this.cacheFilePath, 'utf-8');
-      const parsedData = JSON.parse(fileContent) as CachedCoinList;
-
-      // Check if cache is still valid
-      const now = Date.now();
-      if (parsedData.expiresAt && parsedData.expiresAt > now) {
-        this.logger.log('Using cached coin list');
-        return parsedData;
-      } else {
-        this.logger.log('Cache expired, will fetch fresh data');
-        return null;
-      }
-    } catch (error) {
-      if (error.code === 'ENOENT') {
-        this.logger.log('No cache file found');
-      } else {
-        this.logger.error(`Error reading cache: ${error.message}`);
-      }
-      return null;
-    }
-  }
-
-  /**
-   * Write coin list to cache file
-   */
-  private async writeCachedCoinList(coins: Coin[]): Promise<void> {
-    const now = Date.now();
-    const cachedData: CachedCoinList = {
-      data: coins,
-      timestamp: now,
-      expiresAt: now + this.cacheTTL,
-    };
-
-    try {
-      await fs.writeFile(
-        this.cacheFilePath,
-        JSON.stringify(cachedData, null, 2),
-        'utf-8',
-      );
-      this.logger.log(
-        `Coin list cached successfully. Expires at: ${new Date(cachedData.expiresAt).toISOString()}`,
-      );
-    } catch (error) {
-      this.logger.error(`Failed to write cache: ${error.message}`);
-    }
-  }
-
-  /**
    * Get list of all coins with id, name, and symbol
-   * Uses file-based caching with TTL
+   * Uses Redis caching with TTL
    * @param forceRefresh - Force refresh the cache
    * @returns List of all coins
    */
@@ -184,9 +124,10 @@ export class CoingeckoService {
 
     // Check cache first unless force refresh is requested
     if (!forceRefresh) {
-      const cachedData = await this.readCachedCoinList();
+      const cachedData = await this.cacheManager.get<Coin[]>(this.cacheKey);
       if (cachedData) {
-        return cachedData.data;
+        this.logger.log('Using cached coin list from Redis');
+        return cachedData;
       }
     }
 
@@ -197,8 +138,9 @@ export class CoingeckoService {
       include_platform: 'true',
     });
 
-    // Cache the result
-    await this.writeCachedCoinList(coins);
+    // Cache the result in Redis
+    await this.cacheManager.set(this.cacheKey, coins, this.cacheTTL);
+    this.logger.log('Coin list cached successfully in Redis');
 
     return coins;
   }
@@ -252,38 +194,30 @@ export class CoingeckoService {
    */
   async clearCache(): Promise<void> {
     try {
-      await fs.unlink(this.cacheFilePath);
-      this.logger.log('Cache cleared successfully');
+      await this.cacheManager.del(this.cacheKey);
+      this.logger.log('Cache cleared successfully from Redis');
     } catch (error) {
-      if ((error as any).code === 'ENOENT') {
-        this.logger.log('No cache file to clear');
-      } else {
-        this.logger.error(`Failed to clear cache: ${error.message}`);
-        throw new HttpException(
-          'Failed to clear cache',
-          HttpStatus.INTERNAL_SERVER_ERROR,
-        );
-      }
+      this.logger.error(`Failed to clear cache: ${(error as any).message}`);
+      throw new HttpException(
+        'Failed to clear cache',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   /**
-   * Get cache information (timestamp, expiry, etc.)
+   * Get cache information
    */
   async getCacheInfo(): Promise<{
     exists: boolean;
-    timestamp?: number;
-    expiresAt?: number;
-    isValid?: boolean;
+    ttl?: number;
   }> {
     try {
-      const cachedData = await this.readCachedCoinList();
+      const cachedData = await this.cacheManager.get<Coin[]>(this.cacheKey);
       if (cachedData) {
         return {
           exists: true,
-          timestamp: cachedData.timestamp,
-          expiresAt: cachedData.expiresAt,
-          isValid: cachedData.expiresAt > Date.now(),
+          ttl: this.cacheTTL,
         };
       }
       return { exists: false };

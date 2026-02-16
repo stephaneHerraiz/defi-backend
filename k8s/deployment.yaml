@@ -41,11 +41,16 @@ spec:
                 secretKeyRef:
                   name: postgres-secret
                   key: POSTGRES_USERNAME
+            - name: REDIS_SOCKET_PATH
+              value: "/var/run/redis/redis.sock"
           envFrom:
             - secretRef:
                 name: defi-backend-secrets
             - configMapRef:
                 name: defi-backend-config
+          volumeMounts:
+            - name: redis-socket
+              mountPath: /var/run/redis
           # livenessProbe:
           #   httpGet:
           #     path: /health
@@ -62,6 +67,46 @@ spec:
           #   periodSeconds: 10
           #   timeoutSeconds: 3
           #   failureThreshold: 3
+        # Redis Slave sidecar - replicates from master, serves via Unix socket
+        - name: redis-slave
+          image: redis:7-alpine
+          command:
+            - redis-server
+            - --replicaof
+            - redis-master
+            - "6379"
+            - --replica-read-only
+            - "yes"
+            - --replica-serve-stale-data
+            - "yes"
+            - --unixsocket
+            - /var/run/redis/redis.sock
+            - --unixsocketperm
+            - "777"
+            - --port
+            - "6379"
+          ports:
+            - containerPort: 6379
+          volumeMounts:
+            - name: redis-socket
+              mountPath: /var/run/redis
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "25m"
+            limits:
+              memory: "64Mi"
+              cpu: "100m"
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: redis-socket
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
