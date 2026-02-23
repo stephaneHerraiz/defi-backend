@@ -13,7 +13,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
         const secret = configService.get<string>('JWT_SECRET');
-        console.log('JWT_SECRET from ConfigService:', secret);
         if (!secret) {
           throw new Error('JWT_SECRET is not defined in environment variables');
         }

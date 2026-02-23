@@ -5,6 +5,8 @@ import {
   HttpStatus,
   OnModuleInit,
 } from '@nestjs/common';
+import { BollingerBands } from '@debut/indicators';
+import * as dayjs from 'dayjs';
 import { QuestdbService, QueryResult } from '../questdb/questdb.service';
 import {
   OHLCData,
@@ -294,6 +296,29 @@ export class HistoricalPriceDataService implements OnModuleInit {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  public async getMonthlyBollingerBands(
+    assetAddress: string,
+    chainId: number,
+    limit: number = 20,
+    stdDev: number = 2,
+  ): Promise<{ lower: number; middle: number; upper: number } | undefined> {
+    const tokenMarketChart = await this.getAggregatedOHLC({
+      address: assetAddress,
+      interval: '1M',
+      chainId: chainId,
+      limit: limit,
+      toTimestamp: dayjs().startOf('month').toISOString(),
+      order: 'DESC',
+    });
+
+    let bbres: { lower: number; middle: number; upper: number } | undefined;
+    const bb = new BollingerBands(limit, stdDev);
+    tokenMarketChart.dataset.reverse().forEach((price) => {
+      bbres = bb.nextValue(price.close);
+    });
+    return bbres;
   }
 
   /**

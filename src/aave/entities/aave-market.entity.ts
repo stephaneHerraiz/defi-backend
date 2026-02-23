@@ -2,6 +2,9 @@ import { Entity, Column, PrimaryColumn } from 'typeorm';
 
 @Entity()
 export class AaveMarketEntity {
+  @Column()
+  chainid: number;
+
   @PrimaryColumn()
   chain!: string;
 

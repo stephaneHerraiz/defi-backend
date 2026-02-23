@@ -37,7 +37,6 @@ export class HistoricalPriceDataController {
    * GET /historical-price-data/ohlc/:address/latest
    * Get the latest OHLC record for a token
    */
-  @Public()
   @Get('ohlc/:address/latest')
   async getLatestOHLC(
     @Param('address') address: string,
@@ -97,6 +96,25 @@ export class HistoricalPriceDataController {
       address,
       chainId ? parseInt(chainId, 10) : undefined,
       fromTimestamp,
+    );
+  }
+
+  /**
+   * GET /historical-price-data/ohlc/:address/bollinger/latest
+   * Get the latest Bollinger Bands for a token
+   */
+  @Get('ohlc/:address/bollinger/latest')
+  async getMonthlyBollingerBands(
+    @Param('address') address: string,
+    @Query('chainId') chainId: number,
+    @Query('limit') limit?: number,
+    @Query('stdDev') stdDev?: number,
+  ): Promise<{ lower: number; middle: number; upper: number } | undefined> {
+    return this.historicalPriceDataService.getMonthlyBollingerBands(
+      address,
+      chainId,
+      limit,
+      stdDev,
     );
   }
 }

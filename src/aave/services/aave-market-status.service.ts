@@ -7,7 +7,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindManyOptions, Repository } from 'typeorm';
 import { request } from 'graphql-request';
-import { BollingerBands } from '@debut/indicators';
 import { AaveMarketStatusEntity } from '../entities/aave-market-status.entity';
 import { GET_USER_TRANSACTIONS } from '../gql/user-transactions.gql';
 import { AccountInterface } from '../interfaces/account.interface';
@@ -17,7 +16,6 @@ import { AccountEntity } from '../entities/accounts.entity';
 import { AaveMarketsService } from './aave-markets.service';
 import { ReserveDataHumanized } from '@aave/contract-helpers';
 import { CoingeckoService } from '../../coingecko/coingecko.service';
-import * as dayjs from 'dayjs';
 import { HistoricalPriceDataService } from 'src/historical-price-data/historical-price-data.service';
 
 const AAVE_SUBGRAPH_API_KEY = 'a5133c74a7c022d407d40bfc277e1aa4';
@@ -131,7 +129,10 @@ export class AaveMarketStatusService {
     }
   }
 
-  async getMarketStatus(accountAddress: AccountEntity, marketChain: string): Promise<AaveMarketStatus> {
+  async getMarketStatus(
+    accountAddress: AccountEntity,
+    marketChain: string,
+  ): Promise<AaveMarketStatus> {
     const market = await this.aaveMarketsService.find(marketChain);
     if (!market) {
       throw new Error(`Market not found for chain ${marketChain}`);
@@ -166,16 +167,22 @@ export class AaveMarketStatusService {
     let totalLowerBBBalanceUSD = 0;
 
     for (const reserve of collateralReserves) {
-      const bbres = await this.getMounthlyBB(
-        reserve.underlyingAsset,
-        Number(utils.market.marketAddress.CHAIN_ID),
-      );
-      if (bbres && bbres.lower > 0) {
-        const lowerBBBalanceUSD =
-          Number(reserve.underlyingBalance) * bbres.lower;
-        totalLowerBBBalanceUSD +=
-          lowerBBBalanceUSD *
-          Number(reserve.reserve.formattedReserveLiquidationThreshold);
+      const bbres =
+        await this.historicalPriceDataService.getMonthlyBollingerBands(
+          reserve.underlyingAsset,
+          market.chainid,
+        );
+      if (bbres) {
+        if (bbres.lower < 0) {
+          bbres.lower = 0;
+        }
+        if (bbres.lower > 0) {
+          const lowerBBBalanceUSD =
+            Number(reserve.underlyingBalance) * bbres.lower;
+          totalLowerBBBalanceUSD +=
+            lowerBBBalanceUSD *
+            Number(reserve.reserve.formattedReserveLiquidationThreshold);
+        }
       }
 
       const reserveStatus: AAveReserveStatus = {
@@ -208,27 +215,5 @@ export class AaveMarketStatusService {
         reserveStatusList,
       },
     };
-  }
-
-  private async getMounthlyBB(
-    assetAddress: string,
-    chainId: number,
-  ): Promise<{ lower: number; middle: number; upper: number } | undefined> {
-    const tokenMarketChart =
-      await this.historicalPriceDataService.getAggregatedOHLC({
-        address: assetAddress,
-        interval: '1M',
-        chainId: chainId,
-        limit: 20,
-        toTimestamp: dayjs().startOf('month').toISOString(),
-        order: 'DESC',
-      });
-
-    let bbres: { lower: number; middle: number; upper: number } | undefined;
-    const bb = new BollingerBands(20, 3);
-    tokenMarketChart.dataset.reverse().forEach((price) => {
-      bbres = bb.nextValue(price.close);
-    });
-    return bbres;
   }
 }
