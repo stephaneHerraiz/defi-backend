@@ -1,0 +1,44 @@
+# Dependencies
+node_modules
+npm-debug.log
+
+# Build output
+dist
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+coverage
+.nyc_output
+
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Environment files (should be injected at runtime)
+.env
+.env.*
+!.env.example
+
+# Documentation
+README.md
+docs
+
+# Debug profiles
+remote-debug-profile
+
+# Data files (mount as volumes in production)
+data
