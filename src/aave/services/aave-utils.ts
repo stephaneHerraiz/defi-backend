@@ -10,12 +10,10 @@ import { ethers } from 'ethers';
 import { AaveMarketStatusEntity } from './../entities/aave-market-status.entity';
 import { AaveMarketEntity } from './../entities/aave-market.entity';
 import { AccountEntity } from './../entities/accounts.entity';
-import { GET_MARKETS_RESERVES_INFO } from '../gql/getMarketsReservesInfo.gql';
-import {
-  MarketsReservesInfo,
-  UnderlyingToken,
-} from '../interfaces/aave-market-reserve-info.interface';
+import { GET_MARKET } from '../gql/getMarket.gql';
+import { GetMarketInterface } from '../interfaces/get-market.interface';
 import { request } from 'graphql-request';
+import { UnderlyingToken } from '../interfaces/aave-market';
 
 export interface AaveAsset {
   name: string;
@@ -213,14 +211,14 @@ export class AaveUtils {
 
   async getMarketReservesInfo(chainId: number): Promise<UnderlyingToken[]> {
     try {
-      const data = await request<MarketsReservesInfo>(
+      const data = await request<GetMarketInterface>(
         'https://api.v3.aave.com/graphql',
-        GET_MARKETS_RESERVES_INFO,
+        GET_MARKET,
         {
           chainId: chainId,
         },
       );
-      return data.markets[0].reserves.map((reserve) => reserve.underlyingToken);
+      return data.market.reserves.map((reserve) => reserve.underlyingToken);
     } catch (error) {
       throw new Error(
         `Error fetching data from The Graph API. Please check your query and try again. ${error}`,

@@ -12,6 +12,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { EthereumModule } from 'src/ethereum/ethereum.module';
 import { CoingeckoModule } from '../coingecko/coingecko.module';
 import { HistoricalPriceDataModule } from 'src/historical-price-data/historical-price-data.module';
+import { RiskManagementService } from './services/risk-management.service';
 
 @Module({
   imports: [
@@ -26,6 +27,11 @@ import { HistoricalPriceDataModule } from 'src/historical-price-data/historical-
     HistoricalPriceDataModule,
   ],
   controllers: [AccountsController, AaveMarketController],
-  providers: [AccountsService, AaveMarketsService, AaveMarketStatusService],
+  providers: [
+    AccountsService,
+    AaveMarketsService,
+    AaveMarketStatusService,
+    RiskManagementService,
+  ],
 })
 export class AaveModule {}

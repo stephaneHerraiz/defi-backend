@@ -1,7 +1,6 @@
 import {
   ComputedUserReserve,
   FormatReserveUSDResponse,
-  FormatUserSummaryResponse,
 } from '@aave/math-utils';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -17,6 +16,15 @@ import { AaveMarketsService } from './aave-markets.service';
 import { ReserveDataHumanized } from '@aave/contract-helpers';
 import { CoingeckoService } from '../../coingecko/coingecko.service';
 import { HistoricalPriceDataService } from 'src/historical-price-data/historical-price-data.service';
+import {
+  AaveUserBorrowsInterface,
+  AaveUserSuppliesInterface,
+} from '../interfaces/aave-user.interface';
+import { GET_USER_SUPPLIES } from '../gql/getUserSupplies.gql';
+import { GET_USER_BORROWS } from '../gql/getUserBorrows.gql';
+import { GetMarketInterface } from '../interfaces/get-market.interface';
+import { GET_MARKET } from '../gql/getMarket.gql';
+import { MarketInterface } from '../interfaces/aave-market';
 
 const AAVE_SUBGRAPH_API_KEY = 'a5133c74a7c022d407d40bfc277e1aa4';
 
@@ -52,7 +60,6 @@ export class AaveMarketStatusService {
     @InjectRepository(AaveMarketStatusEntity)
     private aaveMarketStatusRepository: Repository<AaveMarketStatusEntity>,
     private readonly aaveMarketsService: AaveMarketsService,
-    private readonly coingeckoService: CoingeckoService,
     private readonly historicalPriceDataService: HistoricalPriceDataService,
   ) {}
 
@@ -96,21 +103,12 @@ export class AaveMarketStatusService {
     return await this.aaveMarketStatusRepository.find(options);
   }
 
-  async getUserReserves(
-    accountAddress: AccountEntity,
-    marketChain: string,
-  ): Promise<FormatUserSummaryResponse> {
-    const utils = new AaveUtils(marketChain);
-    await utils.fetchContractData(accountAddress);
-    return utils.formatUserSummary();
-  }
-
   async getUserTransactions(
     accountAddress: AccountInterface,
   ): Promise<UserTransactionsResponse> {
     try {
       const data = await request<UserTransactionsResponse>(
-        'https://gateway.thegraph.com/api/subgraphs/id/DLuE98kEb5pQNXAcKFQGQgfSQ57Xdou4jnVbAEqMfy3B',
+        'https://api.v3.aave.com/graphql',
         GET_USER_TRANSACTIONS,
         {
           userAddress: accountAddress.address.toLowerCase(),
@@ -129,91 +127,105 @@ export class AaveMarketStatusService {
     }
   }
 
-  async getMarketStatus(
-    accountAddress: AccountEntity,
-    marketChain: string,
-  ): Promise<AaveMarketStatus> {
-    const market = await this.aaveMarketsService.find(marketChain);
-    if (!market) {
-      throw new Error(`Market not found for chain ${marketChain}`);
-    }
-    const borrowReserves: ComputedUserReserve<
-      ReserveDataHumanized & FormatReserveUSDResponse
-    >[] = [];
-    const collateralReserves: ComputedUserReserve<
-      ReserveDataHumanized & FormatReserveUSDResponse
-    >[] = [];
-    const utils = new AaveUtils(market.chain);
-    await utils.fetchContractData(accountAddress);
-    const reserves = utils.getReserves();
-    reserves.forEach((reserve) => {
-      if (Number(reserve.totalBorrows) > 0) {
-        borrowReserves.push(reserve);
-      } else if (
-        Number(reserve.underlyingBalance) > 0 &&
-        reserve.usageAsCollateralEnabledOnUser
-      ) {
-        collateralReserves.push(reserve);
-      }
-    });
-
-    let totalBorrowsUSD = 0;
-    borrowReserves.forEach((reserve) => {
-      totalBorrowsUSD += Number(reserve.totalBorrowsUSD);
-    });
-
-    const reserveStatusList: AAveReserveStatus[] = [];
-
-    let totalLowerBBBalanceUSD = 0;
-
-    for (const reserve of collateralReserves) {
-      const bbres =
-        await this.historicalPriceDataService.getMonthlyBollingerBands(
-          reserve.underlyingAsset,
-          market.chainid,
-        );
-      if (bbres) {
-        if (bbres.lower < 0) {
-          bbres.lower = 0;
-        }
-        if (bbres.lower > 0) {
-          const lowerBBBalanceUSD =
-            Number(reserve.underlyingBalance) * bbres.lower;
-          totalLowerBBBalanceUSD +=
-            lowerBBBalanceUSD *
-            Number(reserve.reserve.formattedReserveLiquidationThreshold);
-        }
-      }
-
-      const reserveStatus: AAveReserveStatus = {
-        id: reserve.reserve.id,
-        underlyingAsset: reserve.underlyingAsset,
-        name: reserve.reserve.name,
-        symbol: reserve.reserve.symbol,
-        decimals: reserve.reserve.decimals,
-        underlyingBalance: Number(reserve.underlyingBalance),
-      };
-
-      if (bbres) {
-        reserveStatus.monthlyBB = {
-          lower: bbres.lower,
-          middle: bbres.middle,
-          upper: bbres.upper,
-        };
-      }
-
-      reserveStatusList.push(reserveStatus);
-    }
-    const lowerMonthlyBBHealthFactor = totalLowerBBBalanceUSD / totalBorrowsUSD;
-    const maximumBorrowPowerUSD = totalLowerBBBalanceUSD / 1.2;
-    return {
-      totalBorrowsUSD,
-      monthlyBBScenario: {
-        healthFactor: lowerMonthlyBBHealthFactor,
-        maximumBorrowPower: maximumBorrowPowerUSD,
-        liquidationBorrowPower: totalLowerBBBalanceUSD,
-        reserveStatusList,
+  async getUserSupplies(
+    chainId: number,
+    marketAddress: string,
+    accountAddress: string,
+  ): Promise<AaveUserSuppliesInterface[]> {
+    const data = await request<{ userSupplies: AaveUserSuppliesInterface[] }>(
+      'https://api.v3.aave.com/graphql',
+      GET_USER_SUPPLIES,
+      {
+        request: {
+          markets: [
+            {
+              chainId: chainId,
+              address: marketAddress,
+            },
+          ],
+          user: accountAddress.toLowerCase(),
+        },
       },
-    };
+      {
+        Authorization: `Bearer ${AAVE_SUBGRAPH_API_KEY}`,
+      },
+    );
+    if (!data || !data.userSupplies) {
+      throw new Error('No supplies found for the given user and market chain');
+    }
+    return data.userSupplies;
+  }
+
+  async getMarket(
+    chainId: number,
+    marketAddress: string,
+    accountAddress: string,
+  ): Promise<MarketInterface> {
+    try {
+      const data = await request<GetMarketInterface>(
+        'https://api.v3.aave.com/graphql',
+        GET_MARKET,
+        {
+          request: {
+            chainId: chainId,
+            address: marketAddress,
+            user: accountAddress.toLowerCase(),
+          },
+        },
+        {
+          Authorization: `Bearer ${AAVE_SUBGRAPH_API_KEY}`,
+        },
+      );
+      return {
+        userState: {
+          totalDebtBase: data.market.userState.totalDebtBase,
+        },
+        reserves: data.market.reserves.map((reserve) => ({
+          supplyInfo: {
+            liquidationThreshold: reserve.supplyInfo.liquidationThreshold.value,
+          },
+          underlyingToken: {
+            address: reserve.underlyingToken.address,
+            imageUrl: reserve.underlyingToken.imageUrl,
+            name: reserve.underlyingToken.name,
+            decimals: reserve.underlyingToken.decimals,
+            symbol: reserve.underlyingToken.symbol,
+          },
+        })),
+      };
+    } catch (error) {
+      throw new Error(
+        `Error fetching data from The Graph API. Please check your query and try again. ${error}`,
+      );
+    }
+  }
+
+  async getUserBorrows(
+    chainId: number,
+    marketAddress: string,
+    accountAddress: string,
+  ): Promise<AaveUserBorrowsInterface[]> {
+    const data = await request<{ userBorrows: AaveUserBorrowsInterface[] }>(
+      'https://gateway.thegraph.com/api/subgraphs/id/DLuE98kEb5pQNXAcKFQGQgfSQ57Xdou4jnVbAEqMfy3B',
+      GET_USER_BORROWS,
+      {
+        request: {
+          markets: [
+            {
+              chainId: chainId,
+              address: marketAddress,
+            },
+          ],
+          user: accountAddress.toLowerCase(),
+        },
+      },
+      {
+        Authorization: `Bearer ${AAVE_SUBGRAPH_API_KEY}`,
+      },
+    );
+    if (!data || !data.userBorrows) {
+      throw new Error('No borrows found for the given user and market chain');
+    }
+    return data.userBorrows;
   }
 }

@@ -8,6 +8,7 @@ import { AaveMarketsService } from './services/aave-markets.service';
 import { AccountsService } from './services/accounts.service';
 import { Address } from 'src/ethereum/decorators/address.decorator';
 import { Public } from 'src/ethereum/guards/public.decorator';
+import { RiskManagementService } from './services/risk-management.service';
 
 @Controller('aavemarkets')
 export class AaveMarketController {
@@ -15,6 +16,7 @@ export class AaveMarketController {
     private readonly aaveMarketStatusService: AaveMarketStatusService,
     private readonly aaveMarketService: AaveMarketsService,
     private readonly accountsService: AccountsService,
+    private readonly riskManagementService: RiskManagementService,
   ) {}
 
   @Get()
@@ -28,30 +30,6 @@ export class AaveMarketController {
   @Get('markets')
   findAllMarkets(): Promise<AaveMarketEntity[]> {
     return this.aaveMarketService.findAll();
-  }
-
-  @Get('reserves')
-  async getUserReservers(
-    @Query('accountAddress') accountAddress: string,
-    @Query('marketChain') marketChain: string,
-    @Address() userAddress: string,
-    @Res() res: Response,
-  ): Promise<FormatUserSummaryResponse | undefined> {
-    const account = await this.accountsService.findOne(
-      accountAddress,
-      userAddress,
-    );
-    if (!account) {
-      res
-        .status(HttpStatus.BAD_REQUEST)
-        .send('Account not found. Please provide a valid account address.');
-      return;
-    }
-    const result = await this.aaveMarketStatusService.getUserReserves(
-      account,
-      marketChain,
-    );
-    res.status(HttpStatus.OK).send(result);
   }
 
   @Get('transactions')
@@ -77,10 +55,11 @@ export class AaveMarketController {
   }
 
   @Public()
-  @Get('status')
-  async getStatus(
+  @Get('risk-management')
+  async getRiskManagement(
     @Query('accountAddress') accountAddress: string,
     @Query('marketChain') marketChain: string,
+    @Query('chainId') chainId: number,
     @Address() userAddress: string,
     @Res() res: Response,
   ): Promise<FormatUserSummaryResponse | undefined> {
@@ -94,8 +73,9 @@ export class AaveMarketController {
         .send('Account not found. Please provide a valid account address.');
       return;
     }
-    const result = await this.aaveMarketStatusService.getMarketStatus(
-      account,
+    const result = await this.riskManagementService.getPortfolioRisk(
+      account.address,
+      chainId,
       marketChain,
     );
     res.status(HttpStatus.OK).send(result);
