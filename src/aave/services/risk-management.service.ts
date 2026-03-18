@@ -3,10 +3,10 @@ import { AggregatedOHLCOptions } from '../../historical-price-data/interfaces';
 import { HistoricalPriceDataService } from '../../historical-price-data/historical-price-data.service';
 import { AaveMarketStatusService } from './aave-market-status.service';
 import { AaveUserSuppliesInterface } from '../interfaces/aave-user.interface';
-import { Reserve } from '../interfaces/aave-market';
+import { Reserve, supplyLiquidationInterface } from '../interfaces/aave-market';
 
 export interface PortfolioRiskResult {
-  liquidationPrices: Record<string, string>;
+  liquidationPrices: Record<string, supplyLiquidationInterface>;
   totalCollateralValue: string;
   var95: string;
   var99: string;
@@ -142,7 +142,7 @@ export class RiskManagementService {
     marketReserves: Reserve[],
     healthFactor: number = 1,
   ): Promise<PortfolioRiskResult> {
-    const liquidationPrices: Record<string, string> = {};
+    const liquidationPrices: Record<string, supplyLiquidationInterface> = {};
     const dailyReturns: Record<string, number[]> = {};
 
     for (const asset of userSupplies) {
@@ -182,7 +182,11 @@ export class RiskManagementService {
     // Already below the threshold at current prices
     if (totalCurrentCollateral < targetCollateral) {
       userSupplies.forEach(
-        (a) => (liquidationPrices[a.currency.symbol] = 'ALREADY LIQUIDATED'),
+        (a) =>
+          (liquidationPrices[a.currency.address] = {
+            price: -1,
+            error: 'ALREADY LIQUIDATED',
+          }),
       );
       return {
         liquidationPrices,
@@ -225,16 +229,19 @@ export class RiskManagementService {
 
       // Step C: Calculate the % drop required to reach the debt threshold
       if (betaWeightedCollateral <= 0) {
-        liquidationPrices[target.currency.symbol] =
-          'Incalculable (Inverse coverage detected)';
+        liquidationPrices[target.currency.address] = {
+          price: -1,
+          error: 'Incalculable (Inverse coverage detected)',
+        };
       } else {
         const dropRequired =
           (totalCurrentCollateral - targetCollateral) / betaWeightedCollateral;
         const systemicPrice = target.balance.usdPerToken * (1 - dropRequired);
-        liquidationPrices[target.currency.symbol] =
-          systemicPrice > 0
-            ? systemicPrice.toFixed(2)
-            : 'Near-zero risk (Required drop > 100%)';
+        liquidationPrices[target.currency.address] = {
+          price: systemicPrice > 0 ? systemicPrice : -1,
+          error:
+            systemicPrice > 0 ? '' : 'Near-zero risk (Required drop > 100%)',
+        };
       }
     });
 
