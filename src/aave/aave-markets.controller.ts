@@ -35,7 +35,6 @@ export class AaveMarketController {
   @Get('transactions')
   async getUseTransactions(
     @Query('accountAddress') accountAddress: string,
-    @Query('marketChain') marketChain: string,
     @Address() userAddress: string,
     @Res() res: Response,
   ) {
