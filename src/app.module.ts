@@ -5,7 +5,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TerminusModule } from '@nestjs/terminus';
 import { AaveMarketStatusEntity } from './aave/entities/aave-market-status.entity';
 import { AaveMarketEntity } from './aave/entities/aave-market.entity';
-import { AccountEntity } from './aave/entities/accounts.entity';
+import { AccountEntity } from './accounts/entities/accounts.entity';
+import { AccountsModule } from './accounts/accounts.module';
 import { AaveModule } from './aave/aave.module';
 import { EthereumModule } from './ethereum/ethereum.module';
 import { CoingeckoModule } from './coingecko/coingecko.module';
@@ -44,6 +45,7 @@ import { HealthController } from './health.controller';
       inject: [ConfigService],
     }),
     EthereumModule,
+    AccountsModule,
     AaveModule,
     CoingeckoModule,
     QuestdbModule.forRootAsync({

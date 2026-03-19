@@ -5,7 +5,7 @@ import { AaveMarketStatusEntity } from './entities/aave-market-status.entity';
 import { AaveMarketEntity } from './entities/aave-market.entity';
 import { AaveMarketStatusService } from './services/aave-market-status.service';
 import { AaveMarketsService } from './services/aave-markets.service';
-import { AccountsService } from './services/accounts.service';
+import { AccountsService } from '../accounts/services/accounts.service';
 import { Address } from 'src/ethereum/decorators/address.decorator';
 import { Public } from 'src/ethereum/guards/public.decorator';
 import { RiskManagementService } from './services/risk-management.service';

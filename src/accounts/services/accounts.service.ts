@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AccountEntity } from '../entities/accounts.entity';
 import { EtherSignService } from '../../ethereum/services/ether-sign.service';
@@ -21,18 +25,10 @@ export class AccountsService {
     address: string,
     userAddress: string,
   ): Promise<AccountEntity | null> {
-    const user = await this.etherSignService.findOne(userAddress);
-    if (!user) {
-      throw new Error('User not found');
-    }
     return this.accountsRepository.findOneBy({
       address: address,
       userAddress: userAddress,
     });
-  }
-
-  async remove(address: string): Promise<void> {
-    await this.accountsRepository.delete(address);
   }
 
   async create(
@@ -41,7 +37,7 @@ export class AccountsService {
   ): Promise<AccountEntity> {
     const user = await this.etherSignService.findOne(userAddress);
     if (!user) {
-      throw new Error('User not found');
+      throw new NotFoundException('User not found');
     }
 
     const accountEntity = new AccountEntity();
@@ -49,5 +45,18 @@ export class AccountsService {
     accountEntity.label = account.label;
     accountEntity.userAddress = userAddress;
     return this.accountsRepository.save(accountEntity);
+  }
+
+  async remove(id: number, userAddress: string): Promise<void> {
+    const account = await this.accountsRepository.findOneBy({ id });
+    if (!account) {
+      throw new NotFoundException('Account not found');
+    }
+    if (account.userAddress !== userAddress) {
+      throw new ForbiddenException(
+        'You do not have permission to remove this account',
+      );
+    }
+    await this.accountsRepository.delete(id);
   }
 }

@@ -1,5 +1,5 @@
 import { AaveMarketEntity } from '../entities/aave-market.entity';
-import { AccountEntity } from '../entities/accounts.entity';
+import { AccountEntity } from '../../accounts/entities/accounts.entity';
 
 export interface AaveMarketStatusInterface {
   healthFactor: number;

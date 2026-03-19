@@ -9,7 +9,7 @@ import * as addressbook from '@bgd-labs/aave-address-book';
 import { ethers } from 'ethers';
 import { AaveMarketStatusEntity } from './../entities/aave-market-status.entity';
 import { AaveMarketEntity } from './../entities/aave-market.entity';
-import { AccountEntity } from './../entities/accounts.entity';
+import { AccountEntity } from '../../accounts/entities/accounts.entity';
 import { GET_MARKET } from '../gql/getMarket.gql';
 import { GetMarketInterface } from '../interfaces/get-market.interface';
 import { request } from 'graphql-request';

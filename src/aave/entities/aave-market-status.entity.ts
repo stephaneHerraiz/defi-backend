@@ -1,14 +1,13 @@
 import {
   Entity,
   Column,
-  PrimaryColumn,
   PrimaryGeneratedColumn,
   ManyToOne,
   CreateDateColumn,
 } from 'typeorm';
 import { AaveMarketStatusInterface } from '../interfaces/aave-market-status.interface';
 import { AaveMarketEntity } from './aave-market.entity';
-import { AccountEntity } from './accounts.entity';
+import { AccountEntity } from '../../accounts/entities/accounts.entity';
 
 @Entity()
 export class AaveMarketStatusEntity {

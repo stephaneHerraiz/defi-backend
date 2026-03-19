@@ -34,7 +34,8 @@ NestJS 11 backend (TypeScript, ES2023, CommonJS) serving as a DeFi aggregation A
 ### Modules
 
 - **EthereumModule** — Wallet signature verification, nonce management, JWT auth
-- **AaveModule** — Multi-chain Aave protocol integration (ZkSync, Polygon, Arbitrum, Base, Ethereum, Optimism). Market data, user positions, risk management (EWMA volatility, stressed correlations, VaR, systemic liquidation prices)
+- **AccountsModule** — User account management (add/remove blockchain addresses linked to a user). Endpoints: `GET /accounts`, `POST /accounts`, `DELETE /accounts/:id`. Exports `AccountsService` for use by other modules
+- **AaveModule** — Multi-chain Aave protocol integration (ZkSync, Polygon, Arbitrum, Base, Ethereum, Optimism). Market data, user positions, risk management (EWMA volatility, stressed correlations, VaR, systemic liquidation prices). Imports `AccountsModule` to resolve accounts
 - **CoingeckoModule** — Price data from CoinGecko API, cached in Redis (24h TTL) and local file (`/storage/coingecko-coins-list.json`)
 - **HistoricalPriceDataModule** — OHLC data stored in QuestDB, supports intervals (1m to 1w), aggregation, Bollinger Bands
 - **CronModule** — Scheduled OHLC data collection via `@nestjs/schedule`
@@ -87,3 +88,10 @@ Environment variables in `.env` (see `.env.example`):
 - Feature-based module structure: `src/<module>/services/`, `controllers/`, `entities/`, `interfaces/`, `gql/`
 - TypeORM entities with `synchronize: true`
 - Aave chain configs defined in `src/aave/services/aave-utils.ts`
+
+### Authentication & Authorization
+
+- `AuthGuard` is applied globally via `APP_GUARD`. All endpoints require a valid JWT by default
+- Use `@Public()` decorator (`src/ethereum/guards/public.decorator.ts`) to bypass auth on specific endpoints
+- Use `@Address()` decorator (`src/ethereum/decorators/address.decorator.ts`) to extract the authenticated user's wallet address from the JWT. Never read the address from the request body or query params for ownership checks — always use `@Address()`
+- Ownership checks: when an endpoint modifies a user-scoped resource, verify that the resource belongs to the authenticated user (compare `userAddress` from `@Address()` against the resource's owner). Return `ForbiddenException` on mismatch, `NotFoundException` if the resource doesn't exist
