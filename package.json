@@ -99,6 +99,9 @@
   "release-it": {
     "npm": {
       "publish": false
+    },
+    "git": {
+      "tagName": "v${version}"
     }
   }
 }
