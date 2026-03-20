@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AccountEntity } from '../entities/accounts.entity';
@@ -14,6 +16,7 @@ export class AccountsService {
   constructor(
     @InjectRepository(AccountEntity)
     private accountsRepository: Repository<AccountEntity>,
+    @Inject(forwardRef(() => EtherSignService))
     private readonly etherSignService: EtherSignService,
   ) {}
 

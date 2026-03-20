@@ -1,14 +1,25 @@
-import { Body, Controller, HttpStatus, Post, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpStatus,
+  Inject,
+  Post,
+  Res,
+  forwardRef,
+} from '@nestjs/common';
 import { EtherSignService } from './services/ether-sign.service';
 import { Response } from 'express';
 import { recoverPersonalSignature } from '@metamask/eth-sig-util';
 import { JwtService } from '@nestjs/jwt';
 import { Public } from './guards/public.decorator';
+import { AccountsService } from 'src/accounts/services/accounts.service';
 
 @Controller('ether-sign')
 export class EtherSignController {
   constructor(
     private readonly etherSignService: EtherSignService,
+    @Inject(forwardRef(() => AccountsService))
+    private readonly accountsService: AccountsService,
     private jwtService: JwtService,
   ) {}
 
@@ -22,6 +33,13 @@ export class EtherSignController {
     if (!user) {
       // If the user does not exist, create a new user with a nonce
       const nonce = await this.etherSignService.create(address);
+      await this.accountsService.create(
+        {
+          address: address,
+          label: 'My wallet Account',
+        },
+        address,
+      );
       res.status(HttpStatus.OK).send({ nonce: nonce });
       return;
     }

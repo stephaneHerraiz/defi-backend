@@ -90,6 +90,10 @@ Environment variables in `.env` (see `.env.example`):
 - TypeORM entities with `synchronize: true`
 - Aave chain configs defined in `src/aave/services/aave-utils.ts`
 
+### Circular Dependencies
+
+`EthereumModule` and `AccountsModule` have a circular dependency (sign-up creates an account, account creation validates the user exists). Both modules use `forwardRef()` in their `imports` arrays, and the cross-module injected services use `@Inject(forwardRef(() => ...))`. When adding new cross-module dependencies between these two, follow the same `forwardRef` pattern.
+
 ### Authentication & Authorization
 
 - `AuthGuard` is applied globally via `APP_GUARD`. All endpoints require a valid JWT by default

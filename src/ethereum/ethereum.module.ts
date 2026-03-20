@@ -1,10 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EtherSignService } from './services/ether-sign.service';
 import { EtherSignController } from './ether-sign.controller';
 import { UserEntity } from './entities/users.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { AccountsModule } from 'src/accounts/accounts.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       },
       inject: [ConfigService],
     }),
+    forwardRef(() => AccountsModule),
   ],
   providers: [EtherSignService],
   controllers: [EtherSignController],
