@@ -115,6 +115,7 @@ export class RiskManagementService {
     accountAddress: string,
     marketChain: number,
     marketAddress: string,
+    overrideDebt?: number,
   ): Promise<PortfolioRiskResult> {
     const userSupplies = await this.aaveMarketStatusService.getUserSupplies(
       marketChain,
@@ -127,10 +128,12 @@ export class RiskManagementService {
       marketAddress,
       accountAddress,
     );
+    const debt =
+      overrideDebt != null ? Number(overrideDebt) : market.userState.totalDebtBase;
     return await this.calculateSystemicLiquidationPrices(
       marketChain,
       userSupplies,
-      market.userState.totalDebtBase,
+      debt,
       market.reserves,
     );
   }

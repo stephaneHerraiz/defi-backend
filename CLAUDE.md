@@ -36,6 +36,7 @@ NestJS 11 backend (TypeScript, ES2023, CommonJS) serving as a DeFi aggregation A
 - **EthereumModule** — Wallet signature verification, nonce management, JWT auth
 - **AccountsModule** — User account management (add/remove blockchain addresses linked to a user). Endpoints: `GET /accounts`, `POST /accounts`, `DELETE /accounts/:id`. Exports `AccountsService` for use by other modules
 - **AaveModule** — Multi-chain Aave protocol integration (ZkSync, Polygon, Arbitrum, Base, Ethereum, Optimism). Market data, user positions, risk management (EWMA volatility, stressed correlations, VaR, systemic liquidation prices). Imports `AccountsModule` to resolve accounts
+  - `GET /aavemarkets/risk-management` accepts an optional `customDebt` query param. When provided, it overrides the user's actual Aave total borrow (`totalDebtBase`) for risk calculations. When omitted, debt is fetched from Aave as usual
 - **CoingeckoModule** — Price data from CoinGecko API, cached in Redis (24h TTL) and local file (`/storage/coingecko-coins-list.json`)
 - **HistoricalPriceDataModule** — OHLC data stored in QuestDB, supports intervals (1m to 1w), aggregation, Bollinger Bands
 - **CronModule** — Scheduled OHLC data collection via `@nestjs/schedule`

@@ -59,6 +59,7 @@ export class AaveMarketController {
     @Query('accountAddress') accountAddress: string,
     @Query('marketChain') marketChain: string,
     @Query('chainId') chainId: number,
+    @Query('customDebt') debt: number | undefined,
     @Address() userAddress: string,
     @Res() res: Response,
   ): Promise<FormatUserSummaryResponse | undefined> {
@@ -76,6 +77,7 @@ export class AaveMarketController {
       account.address,
       chainId,
       marketChain,
+      debt,
     );
     res.status(HttpStatus.OK).send(result);
   }

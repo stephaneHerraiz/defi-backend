@@ -65,7 +65,7 @@ export interface AaveUserMarketInterface {
   netWorth: number;
   availableBorrowsBase: number;
   currentLiquidationThreshold: number;
-};
+}
 
 export interface supplyLiquidationInterface {
   price: number;

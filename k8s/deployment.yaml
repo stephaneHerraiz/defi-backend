@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: defi-backend
-          image: 192.168.0.68:32000/defi-backend:latest
+          image: ghcr.io/stephaneherraiz/defi-backend:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
