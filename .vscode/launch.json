@@ -19,18 +19,5 @@
             "envFile": "${workspaceFolder}/.env",
             "console": "integratedTerminal"
         },
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "Lancer le programme",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "program": "${workspaceFolder}/src/aave/accounts.controller.ts",
-            "preLaunchTask": "tsc: build - tsconfig.json",
-            "outFiles": [
-                "${workspaceFolder}/dist/**/*.js"
-            ]
-        }
     ]
 }
